@@ -9,7 +9,8 @@ load_dotenv()
 
 app = FastAPI()
 
-MODEL_ID = "meta-llama/Llama-3.2-3B-Instruct"  # ✅ Llama 3.2 (3B) - Good balance
+MODEL_ID = "meta-llama/Llama-3.3-70B-Instruct"
+# MODEL_ID = "meta-llama/Llama-3.2-3B-Instruct"  # ✅ Llama 3.2 (3B) - Good balance
 # MODEL_ID = "meta-llama/Llama-3.2-1B-Instruct"  # ✅ Llama 3.2 (1B) - Faster, smaller
 # MODEL_ID = "HuggingFaceH4/zephyr-7b-beta"  # ✅ Zephyr 7B - Good chat model
 # MODEL_ID = "microsoft/Phi-3.5-mini-instruct"  # ✅ Phi-3.5 - Microsoft's model
