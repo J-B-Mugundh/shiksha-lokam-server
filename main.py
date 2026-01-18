@@ -6,12 +6,9 @@ from contextlib import asynccontextmanager
 from pydantic import BaseModel
 from typing import List, Optional
 
-# MongoDB connection URI
-uri = "mongodb+srv://admin:adminmafia@cluster0.twzmx5d.mongodb.net/?appName=Cluster0"
-
 # Load environment variables
 load_dotenv()
-# Global MongoDB client
+
 import os
 mongodb_client = None
 db = None
@@ -21,6 +18,7 @@ async def lifespan(app: FastAPI):
     # Startup: Connect to MongoDB
     global mongodb_client, db
     try:        
+        uri = os.getenv("MONGODB_URI")
         mongodb_client = MongoClient(uri, server_api=ServerApi('1'))
         mongodb_client.admin.command('ping')
         print("✓ Successfully connected to MongoDB!")
