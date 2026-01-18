@@ -55,3 +55,25 @@
   "user_text": "Hello"
 }
 ```
+
+4. Testing
+
+# Install test requirements
+```bash
+   pip install -r requirements-test.txt
+```
+
+# Run all tests with verbose output
+```bash
+pytest tests/test_complete_flow.py -v -s
+```
+
+# Run with coverage report
+```bash
+pytest tests/test_complete_flow.py -v --cov=
+```
+
+# Run specific test class
+```bash
+pytest tests/test_complete_flow py::TestUserRegistration -v
+```

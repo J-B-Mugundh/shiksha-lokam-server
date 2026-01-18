@@ -12,3 +12,5 @@ zai-sdk
 sniffio
 langchain
 langchain-huggingface
+bcrypt
+pydantic[email]
