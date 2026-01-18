@@ -359,49 +359,19 @@ class TestLFACreation:
             "program_name": f"Test Program {UNIQUE_ID}",
             "program_description": "Test program description for comprehensive literacy intervention",
             "inputs": [
-                {
-                    "input_text": "Trained teachers",
-                    "is_template": False
-                },
-                {
-                    "input_text": "Learning materials",
-                    "is_template": False
-                }
+                {"input_text": "Trained teachers", "is_template": False},
+                {"input_text": "Learning materials", "is_template": False}
             ],
             "activities": [
-                {
-                    "activity_text": "Teacher training on phonics methods",
-                    "duration_weeks": 4
-                },
-                {
-                    "activity_text": "Student practice sessions",
-                    "duration_weeks": 12
-                }
+                {"activity_text": "Teacher training on phonics methods", "duration_weeks": 4},
+                {"activity_text": "Student practice sessions", "duration_weeks": 12}
             ],
             "outputs": [
-                {
-                    "output_text": "Trained teachers",
-                    "is_template": False
-                },
-                {
-                    "output_text": "Student reading materials",
-                    "is_template": False
-                }
+                {"output_text": "Trained teachers", "is_template": False},
+                {"output_text": "Student reading materials", "is_template": False}
             ],
-            "outcomes": [
-                {
-                    "outcome_id": test_data["outcome_id"],
-                    "outcome_statement": "Teachers effectively use phonics-based teaching methods",
-                    "custom_indicators": []
-                }
-            ],
-            "impacts": [
-                {
-                    "impact_id": test_data["impact_id"],
-                    "impact_statement": "Improved student reading comprehension by 40%",
-                    "custom_indicators": []
-                }
-            ]
+            "outcome_ids": [test_data["outcome_id"]],  # CHANGED: Just IDs
+            "impact_ids": [test_data["impact_id"]]      # CHANGED: Just IDs
         }
         
         print(f"\n📋 Creating LFA: {lfa_data['name']}")

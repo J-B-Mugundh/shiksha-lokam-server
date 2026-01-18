@@ -27,7 +27,6 @@ class ImpactIndicatorInput(BaseModel):
 
 class LFAImpactInput(BaseModel):
     impact_id: str = Field(..., description="FK to impacts collection")
-    impact_statement: Optional[str] = None
     custom_indicators: List[ImpactIndicatorInput] = Field(default=[])
 
 class OutcomeIndicatorInput(BaseModel):
@@ -38,7 +37,6 @@ class OutcomeIndicatorInput(BaseModel):
 
 class LFAOutcomeInput(BaseModel):
     outcome_id: str = Field(..., description="FK to outcomes collection")
-    outcome_statement: Optional[str] = None
     custom_indicators: List[OutcomeIndicatorInput] = Field(default=[])
 
 class LFACreateRequest(BaseModel):
@@ -54,8 +52,8 @@ class LFACreateRequest(BaseModel):
     inputs: Optional[List[dict]] = Field(default=[])
     activities: Optional[List[dict]] = Field(default=[])
     outputs: Optional[List[dict]] = Field(default=[])
-    impacts: List[LFAImpactInput] = Field(default=[])
-    outcomes: List[LFAOutcomeInput] = Field(default=[])
+    impact_ids: List[str] = Field(default=[])  # CHANGED: Just IDs
+    outcome_ids: List[str] = Field(default=[])  # CHANGED: Just IDs
 
 class LFAUpdateRequest(BaseModel):
     name: Optional[str] = None
@@ -67,8 +65,8 @@ class LFAUpdateRequest(BaseModel):
     inputs: Optional[List[dict]] = None
     activities: Optional[List[dict]] = None
     outputs: Optional[List[dict]] = None
-    impacts: Optional[List[LFAImpactInput]] = None
-    outcomes: Optional[List[LFAOutcomeInput]] = None
+    impact_ids: Optional[List[str]] = None  # CHANGED: Just IDs
+    outcome_ids: Optional[List[str]] = None  # CHANGED: Just IDs
 
 class ReviewFeedbackItem(BaseModel):
     section: str = Field(..., description="e.g., 'impacts', 'outcomes'")
@@ -88,29 +86,37 @@ def lfa_to_response(lfa: dict) -> dict:
     return lfa_copy
 
 async def populate_lfa_references(db, lfa: dict) -> dict:
-    """Populate denormalized fields from referenced collections"""
+    """Populate full impact/outcome objects from IDs for API responses"""
     
-    # Populate impact statements
-    for impact_ref in lfa.get("impacts", []):
-        if "impact_statement" not in impact_ref:
-            try:
-                impact = db.impacts.find_one({"_id": ObjectId(impact_ref["impact_id"])})
-                if impact:
-                    impact_ref["impact_statement"] = impact["impact_statement"]
-                    impact_ref["category"] = impact.get("category", "")
-            except Exception as e:
-                logger.warning(f"Could not populate impact: {e}")
+    # Populate impact objects
+    impacts_full = []
+    for impact_id in lfa.get("impact_ids", []):
+        try:
+            impact = db.impacts.find_one({"_id": ObjectId(impact_id)})
+            if impact:
+                impacts_full.append({
+                    "impact_id": impact_id,
+                    "impact_statement": impact["impact_statement"],
+                    "category": impact.get("category", "")
+                })
+        except Exception as e:
+            logger.warning(f"Could not populate impact: {e}")
+    lfa["impacts"] = impacts_full
     
-    # Populate outcome statements
-    for outcome_ref in lfa.get("outcomes", []):
-        if "outcome_statement" not in outcome_ref:
-            try:
-                outcome = db.outcomes.find_one({"_id": ObjectId(outcome_ref["outcome_id"])})
-                if outcome:
-                    outcome_ref["outcome_statement"] = outcome["outcome_statement"]
-                    outcome_ref["stakeholder_type"] = outcome.get("stakeholder_type", "")
-            except Exception as e:
-                logger.warning(f"Could not populate outcome: {e}")
+    # Populate outcome objects
+    outcomes_full = []
+    for outcome_id in lfa.get("outcome_ids", []):
+        try:
+            outcome = db.outcomes.find_one({"_id": ObjectId(outcome_id)})
+            if outcome:
+                outcomes_full.append({
+                    "outcome_id": outcome_id,
+                    "outcome_statement": outcome["outcome_statement"],
+                    "stakeholder_type": outcome.get("stakeholder_type", "")
+                })
+        except Exception as e:
+            logger.warning(f"Could not populate outcome: {e}")
+    lfa["outcomes"] = outcomes_full
     
     return lfa
 
@@ -132,43 +138,19 @@ async def create_lfa(request: LFACreateRequest):
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
         
-        # Build impacts with denormalized data
-        impacts_data = []
-        for impact_input in request.impacts:
-            try:
-                impact = db.impacts.find_one({"_id": ObjectId(impact_input.impact_id)})
-                if not impact:
-                    raise HTTPException(status_code=404, detail=f"Impact {impact_input.impact_id} not found")
-                
-                impacts_data.append({
-                    "impact_id": impact_input.impact_id,
-                    "impact_statement": impact["impact_statement"],
-                    "category": impact.get("category", ""),
-                    "custom_indicators": [ind.dict() if hasattr(ind, 'dict') else ind for ind in impact_input.custom_indicators]
-                })
-            except Exception as e:
-                logger.error(f"Error processing impact: {e}")
-                raise HTTPException(status_code=400, detail=f"Error processing impact {impact_input.impact_id}: {str(e)}")
+        # Verify all impacts exist
+        for impact_id in request.impact_ids:
+            impact = db.impacts.find_one({"_id": ObjectId(impact_id)})
+            if not impact:
+                raise HTTPException(status_code=404, detail=f"Impact {impact_id} not found")
         
-        # Build outcomes with denormalized data
-        outcomes_data = []
-        for outcome_input in request.outcomes:
-            try:
-                outcome = db.outcomes.find_one({"_id": ObjectId(outcome_input.outcome_id)})
-                if not outcome:
-                    raise HTTPException(status_code=404, detail=f"Outcome {outcome_input.outcome_id} not found")
-                
-                outcomes_data.append({
-                    "outcome_id": outcome_input.outcome_id,
-                    "outcome_statement": outcome["outcome_statement"],
-                    "stakeholder_type": outcome.get("stakeholder_type", ""),
-                    "custom_indicators": [ind.dict() if hasattr(ind, 'dict') else ind for ind in outcome_input.custom_indicators]
-                })
-            except Exception as e:
-                logger.error(f"Error processing outcome: {e}")
-                raise HTTPException(status_code=400, detail=f"Error processing outcome {outcome_input.outcome_id}: {str(e)}")
+        # Verify all outcomes exist
+        for outcome_id in request.outcome_ids:
+            outcome = db.outcomes.find_one({"_id": ObjectId(outcome_id)})
+            if not outcome:
+                raise HTTPException(status_code=404, detail=f"Outcome {outcome_id} not found")
         
-        # Create LFA document
+        # Create LFA document (storing only IDs)
         lfa_data = {
             "name": request.name,
             "organization_id": request.organization_id,
@@ -182,8 +164,8 @@ async def create_lfa(request: LFACreateRequest):
             "inputs": request.inputs or [],
             "activities": request.activities or [],
             "outputs": request.outputs or [],
-            "impacts": impacts_data,
-            "outcomes": outcomes_data,
+            "impact_ids": request.impact_ids,  # Store only IDs
+            "outcome_ids": request.outcome_ids,  # Store only IDs
             "status": "draft",
             "collaborators": [],
             "version": 1,
@@ -263,7 +245,7 @@ async def get_lfa(lfa_id: str):
         if not lfa:
             raise HTTPException(status_code=404, detail="LFA not found")
         
-        # Populate references
+        # Populate impact and outcome full objects
         lfa = await populate_lfa_references(db, lfa)
         
         # Get creator info
@@ -332,38 +314,20 @@ async def update_lfa(lfa_id: str, request: LFAUpdateRequest):
             update_data["activities"] = request.activities
         if request.outputs is not None:
             update_data["outputs"] = request.outputs
-        
-        # Update impacts with denormalized data
-        if request.impacts is not None:
-            impacts_data = []
-            for impact_input in request.impacts:
-                impact = db.impacts.find_one({"_id": ObjectId(impact_input.impact_id)})
+        if request.impact_ids is not None:
+            # Verify all impacts exist
+            for impact_id in request.impact_ids:
+                impact = db.impacts.find_one({"_id": ObjectId(impact_id)})
                 if not impact:
-                    raise HTTPException(status_code=404, detail=f"Impact {impact_input.impact_id} not found")
-                
-                impacts_data.append({
-                    "impact_id": impact_input.impact_id,
-                    "impact_statement": impact["impact_statement"],
-                    "category": impact.get("category", ""),
-                    "custom_indicators": [ind.dict() if hasattr(ind, 'dict') else ind for ind in impact_input.custom_indicators]
-                })
-            update_data["impacts"] = impacts_data
-        
-        # Update outcomes with denormalized data
-        if request.outcomes is not None:
-            outcomes_data = []
-            for outcome_input in request.outcomes:
-                outcome = db.outcomes.find_one({"_id": ObjectId(outcome_input.outcome_id)})
+                    raise HTTPException(status_code=404, detail=f"Impact {impact_id} not found")
+            update_data["impact_ids"] = request.impact_ids
+        if request.outcome_ids is not None:
+            # Verify all outcomes exist
+            for outcome_id in request.outcome_ids:
+                outcome = db.outcomes.find_one({"_id": ObjectId(outcome_id)})
                 if not outcome:
-                    raise HTTPException(status_code=404, detail=f"Outcome {outcome_input.outcome_id} not found")
-                
-                outcomes_data.append({
-                    "outcome_id": outcome_input.outcome_id,
-                    "outcome_statement": outcome["outcome_statement"],
-                    "stakeholder_type": outcome.get("stakeholder_type", ""),
-                    "custom_indicators": [ind.dict() if hasattr(ind, 'dict') else ind for ind in outcome_input.custom_indicators]
-                })
-            update_data["outcomes"] = outcomes_data
+                    raise HTTPException(status_code=404, detail=f"Outcome {outcome_id} not found")
+            update_data["outcome_ids"] = request.outcome_ids
         
         if not update_data:
             raise HTTPException(status_code=400, detail="No fields to update")
@@ -401,9 +365,9 @@ async def submit_lfa_for_review(lfa_id: str):
             raise HTTPException(status_code=400, detail="Only draft LFAs can be submitted for review")
         
         # Validate LFA has minimum required data
-        if not lfa.get("impacts") or len(lfa["impacts"]) == 0:
+        if not lfa.get("impact_ids") or len(lfa["impact_ids"]) == 0:
             raise HTTPException(status_code=400, detail="LFA must have at least one impact")
-        if not lfa.get("outcomes") or len(lfa["outcomes"]) == 0:
+        if not lfa.get("outcome_ids") or len(lfa["outcome_ids"]) == 0:
             raise HTTPException(status_code=400, detail="LFA must have at least one outcome")
         
         db.lfas.update_one(
