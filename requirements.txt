@@ -1,4 +1,14 @@
-python-dotenv
 fastapi
-uvicorn 
+uvicorn
 pymongo[srv]
+python-dotenv
+pydantic
+transformers
+torch
+torchvision
+accelerate
+pillow
+zai-sdk
+sniffio
+langchain
+langchain-huggingface
