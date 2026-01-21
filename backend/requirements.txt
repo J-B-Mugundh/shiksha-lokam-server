@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+motor
+pydantic
+python-multipart
+
+# Optional but recommended
+python-dotenv
+pymongo
