@@ -13,7 +13,7 @@ action_service = ActionService()
 from app.models.execution import CreateExecutionRequest, ExecutionResponse
 
 
-@router.post("", response_model=ExecutionResponse, status_code=201)
+@router.post("", status_code=201)
 async def create_execution(
     payload: CreateExecutionRequest,
     user=Depends(get_current_user),

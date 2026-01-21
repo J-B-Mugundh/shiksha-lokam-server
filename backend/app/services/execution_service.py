@@ -1,11 +1,23 @@
 from datetime import datetime
 from app.core.exceptions import DomainError
 from app.db.mongo import mongo_transaction
+
+from datetime import datetime, timedelta
+
+from app.core.exceptions import DomainError
+from app.db.mongo import mongo_transaction
+
 from app.repositories.execution_repo import ExecutionRepository
 from app.repositories.level_repo import ExecutionLevelRepository
+from app.repositories.action_repo import ExecutionActionRepository
+from app.repositories.lfa_repo import LFARepository
+
+
 
 execution_repo = ExecutionRepository()
 level_repo = ExecutionLevelRepository()
+action_repo = ExecutionActionRepository()
+lfa_repo = LFARepository()
 
 class ExecutionService:
 
@@ -74,25 +86,6 @@ class ExecutionService:
 
         await execution_repo.mark_completed(execution_id)
 
-from datetime import datetime, timedelta
-
-from app.core.exceptions import DomainError
-from app.db.mongo import mongo_transaction
-
-from app.repositories.execution_repo import ExecutionRepository
-from app.repositories.level_repo import ExecutionLevelRepository
-from app.repositories.action_repo import ExecutionActionRepository
-from app.repositories.lfa_repo import LFARepository
-
-
-execution_repo = ExecutionRepository()
-level_repo = ExecutionLevelRepository()
-action_repo = ExecutionActionRepository()
-lfa_repo = LFARepository()
-
-
-class ExecutionService:
-
     async def create_execution(self, payload, user):
         """
         POST /executions
@@ -108,7 +101,7 @@ class ExecutionService:
             lfa = await lfa_repo.get_by_id(payload.lfa_id)
             if not lfa:
                 raise DomainError("LFA not found")
-
+            print(lfa)
             if lfa["status"] != "locked":
                 raise DomainError("Only locked LFAs can be executed")
 
@@ -222,7 +215,7 @@ class ExecutionService:
             # ------------------------------------------------------------------
             # 6️⃣ Explicitly unlock first action
             # ------------------------------------------------------------------
-            first_action = await action_repo.get_first_incomplete(first_level_id)
+            first_action = await action_repo.get_first_incomplete(first_level_id, session=session)
             if not first_action:
                 raise DomainError("No actions created for first level")
 

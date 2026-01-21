@@ -1,4 +1,4 @@
-from app.db.mongo import db
+from app.db.mongo import db, to_object_id
 
 class ExecutionRepository:
 
@@ -6,8 +6,7 @@ class ExecutionRepository:
         doc = {
             "lfaId": lfa["_id"],
             "lfaName": lfa["name"],
-            "organizationId": lfa["organizationId"],
-            "organizationName": lfa["organizationName"],
+            "organizationId": lfa["organization_id"],
             "status": "active",
             "currentLevelNumber": 1,
             "overallCompletionPercentage": 0,
@@ -30,21 +29,21 @@ class ExecutionRepository:
         return doc
 
     async def get_by_id(self, execution_id: str):
-        return await db.executions.find_one({"_id": execution_id})
+        return await db.executions.find_one({"_id": to_object_id(execution_id)})
 
     async def get_by_lfa_id(self, lfa_id: str):
-        return await db.executions.find_one({"lfaId": lfa_id})
+        return await db.executions.find_one({"lfaId": to_object_id(lfa_id)})
 
     async def update_status(self, execution_id: str, status: str, session=None):
         await db.executions.update_one(
-            {"_id": execution_id},
+            {"_id": to_object_id(execution_id)},
             {"$set": {"status": status}},
             session=session,
         )
 
     async def mark_completed(self, execution_id: str, session=None):
         await db.executions.update_one(
-            {"_id": execution_id},
+            {"_id": to_object_id(execution_id)},
             {"$set": {"status": "completed"}},
             session=session,
         )

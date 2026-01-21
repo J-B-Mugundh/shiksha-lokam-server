@@ -29,14 +29,16 @@ class ExecutionActionRepository:
         if docs:
             await db.execution_actions.insert_many(docs, session=session)
 
-    async def get_first_incomplete(self, level_id: str):
+    async def get_first_incomplete(self, level_id: str, session=None):
         return await db.execution_actions.find_one(
             {
                 "executionLevelId": level_id,
                 "status": {"$ne": "completed"},
             },
             sort=[("sequenceNumber", 1)],
+            session=session,
         )
+
 
     async def get_by_id(self, action_id: str):
         return await db.execution_actions.find_one({"_id": action_id})
